@@ -8,7 +8,6 @@ Created on Sun Jan 21 16:12:54 2018
 # %% imports
 
 import pandas as pd
-#import numpy as np
 import json
 import requests
 
@@ -23,9 +22,6 @@ filename_OutfitID = path_UserInformation + "OutfitID.txt"
 
 # %% Load the user specific data
 
-#OutfitName = pd.read_csv(filename_outfitname)
-#UserName = pd.read_csv(filename_userid)
-
 with open(filename_UserID) as f:
     UserName = f.read()
     
@@ -33,13 +29,13 @@ with open(filename_OutfitName) as f:
     OutfitName = f.read()
 
 
-## %%
+## %% A test of the API functionality
 #
 #request = requests.get("https://census.daybreakgames.com/s:" + UserName +
 #                       "/get/ps2:v2/event/?type=DEATH&c:limit=1")
 #print(request.text)
 
-# %%
+# %% Searching for the ID of the outfit and saving on the local machine
 
 request = requests.get("http://census.daybreakgames.com/s:" + UserName +
                        "get/ps2:v2/outfit/?name="+OutfitName)
@@ -71,7 +67,7 @@ print(request.text)
 #df_OutfitMembers = json.loads(request.text)['outfit_list'][0]['members'][0]
 df_OutfitMembers = pd.DataFrame(json.loads(request.text)['outfit_list'][0]['members'])
 
-## %%
+## %% Testing the retrieval of the first outfit member
 #
 #CharacterID = df_OutfitMembers['character_id'][0]
 #request = requests.get("http://census.daybreakgames.com/s:" + UserName +
@@ -79,16 +75,15 @@ df_OutfitMembers = pd.DataFrame(json.loads(request.text)['outfit_list'][0]['memb
 #
 #print(request.text)
 
-# %%
+# %% Making a concatenated string containing all of the user IDs separated by commas for use in the URL request
 
 str_CharacterIDs = ""
 for CharacterID in df_OutfitMembers['character_id']:
     str_CharacterIDs += CharacterID + ','
 str_CharacterIDs = str_CharacterIDs[:-1]
 
-# %%
-
-    
+# %% Requesting all of the user IDs in a single request
+# This failed because the URL was too long.    
 
 #for CharacterID in df_OutfitMembers['character_id']:
     # print(CharacterID)
