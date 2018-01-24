@@ -13,7 +13,7 @@ import requests
 
 # %% Path and filename definitions
 
-path_UserInformation = "../../../Code/TheMachine/Inputs/"
+path_UserInformation = "../Code/GameUtilities/GameUtilitiesResources/"
 
 filename_UserID = path_UserInformation + "APIUserName.txt"
 filename_OutfitName = path_UserInformation + "OutfitName.txt"
