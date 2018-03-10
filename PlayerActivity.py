@@ -4,9 +4,14 @@ Created on Sun Jan 21 16:12:54 2018
 
 @author: crhuffer
 
+<<<<<<< HEAD
 Read in the API user id of the current user, the outfit to explore. Load the
 names of the outfit members. Load the data for each member and put relevant
 info into a dataframe about player activity.
+=======
+Loads data from the daybreak API about an outfit and saves the data into
+a dataframe.
+>>>>>>> origin/master
 """
 
 # %% imports
@@ -36,11 +41,19 @@ filename_OutfitData = path_UserInformation + "OutfitData.csv"
 
 # %% Load the user specific data
 
-with open(filename_UserID) as f:
-    UserName = f.read()
+def get_user_id(filename_UserID = filename_UserID):
+    with open(filename_UserID) as f:
+        UserName = f.read()
+        return UserName
 
-with open(filename_OutfitName) as f:
-    OutfitName = f.read()
+UserName = get_user_id()
+
+def get_outfit_name(filename_OutfitID = filename_OutfitID):
+    with open(filename_OutfitName) as f:
+        OutfitName = f.read()
+        return OutfitName
+
+OutfitName = get_outfit_name()
 
 
 # # %% A test of the API functionality
@@ -64,59 +77,90 @@ with open(filename_OutfitName) as f:
 #
 # %% Load the outfit ID if this doesn't work run commented previous cell
 
-with open(filename_OutfitID) as f:
-    OutfitID = f.read()
+def get_outfit_id(filename_OutfitID = filename_OutfitID):
+    with open(filename_OutfitID) as f:
+        OutfitID = f.read()
+        return OutfitID
+
+OutfitID = get_outfit_id()
 
 # %% Get a list of the outfit members
 
-request = requests.get("http://census.daybreakgames.com/s:" + UserName +
-                       "/get/ps2:v2/outfit/?outfit_id=" + OutfitID +
-                       "&c:resolve=member")
-# based off of the example in the documentation:
-# http://census.daybreakgames.com/
-# https://census.daybreakgames.com/get/ps2:v2/outfit/?outfit_id=37509488620601345&c:resolve=member
+def get_outfit_member_list(OutfitID, UserName, verbose=False):
+    """
+    Retrieves a list of outfit members from the API and returns them in 
+    a pandas dataframe.
+    
+    Arguments:
+        OutfitID (str): numeric ID for the outfit.
+        
+        UserName (str): account name for the user pulling from the API.
 
-print(request.text)
-# df_OutfitMembers = pd.read_json(json.loads(request.text))
-# df_OutfitMembers = pd.read_json(json.loads(request.text)[
-#     'outfit_list'][0]['members'])
-# df_OutfitMembers = json.loads(request.text)['outfit_list'][0]['members'][0]
-df_OutfitMembers = pd.DataFrame(json.loads(request.text
-                                           )['outfit_list'][0]['members'])
+    Returns:
+        df_OutfitMembers (pandas.DataFrame): API data dropped in pd.
+    """
+    request = requests.get("http://census.daybreakgames.com/s:" + UserName +
+                           "/get/ps2:v2/outfit/?outfit_id=" + OutfitID +
+                           "&c:resolve=member")
+    # based off of the example in the documentation:
+    # http://census.daybreakgames.com/
+    # https://census.daybreakgames.com/get/ps2:v2/outfit/?outfit_id=37509488620601345&c:resolve=member
+
+    if verbose == True:
+        print(request.text)
+    # df_OutfitMembers = pd.read_json(json.loads(request.text))
+    # df_OutfitMembers = pd.read_json(json.loads(request.text)[
+    #     'outfit_list'][0]['members'])
+    # df_OutfitMembers = json.loads(request.text)['outfit_list'][0]['members'][0]
+    df_OutfitMembers = pd.DataFrame(json.loads(request.text
+                                               )['outfit_list'][0]['members'])
+    return df_OutfitMembers
+
+df_OutfitMembers = get_outfit_member_list(OutfitID, UserName)
 
 # %% Testing the retrieval of the first outfit member
 
-CharacterID = df_OutfitMembers['character_id'][0]
-request = requests.get("http://census.daybreakgames.com/s:" + UserName +
-                       "/get/ps2:v2/character/?character_id=" + CharacterID)
-
-print(request.text)
-
-LastSaveDate = json.loads(request.text
-                          )['character_list'][0]['times']['last_save_date']
-
-# %% Load the player status of each member in the outfit
-
-df_OutfitMembers['last_login_date'] = ''
-df_OutfitMembers['name'] = ''
-
-for index in df_OutfitMembers['character_id'].index:
-    CharacterID = df_OutfitMembers.loc[index, 'character_id']
-
+def test_member_apirequest(Username, CharacterID, verbose=False):
+    #CharacterID = df_OutfitMembers['character_id'][0]
     request = requests.get("http://census.daybreakgames.com/s:" + UserName +
                            "/get/ps2:v2/character/?character_id=" +
                            CharacterID)
-    try:
-        last_login_date = json.loads(request.text)['character_list'][0][
-                'times']['last_login_date']
-        CurrentUserName = json.loads(request.text)['character_list'][0][
-                'name']['first']
-        df_OutfitMembers.loc[index, 'last_login_date'] = last_login_date
-        df_OutfitMembers.loc[index, 'name'] = CurrentUserName
-    except KeyError:
-        print(request.text)
-        break
 
+    if verbose:
+        print(request.text)
+
+    LastSaveDate = json.loads(request.text
+                              )['character_list'][0]['times']['last_save_date']
+    return LastSaveDate
+
+test_member_apirequest(UserName, df_OutfitMembers['character_id'][0])
+
+
+# %% Load the player status of each member in the outfit
+
+def get_members_last_login(df_OutfitMembers):
+    df_OutfitMembers['last_login_date'] = ''
+    df_OutfitMembers['name'] = ''
+    
+    for index in df_OutfitMembers['character_id'].index:
+        CharacterID = df_OutfitMembers.loc[index, 'character_id']
+    
+        request = requests.get("http://census.daybreakgames.com/s:" + UserName +
+                               "/get/ps2:v2/character/?character_id=" +
+                               CharacterID)
+        try:
+            last_login_date = json.loads(request.text)['character_list'][0][
+                    'times']['last_login_date']
+            CurrentUserName = json.loads(request.text)['character_list'][0][
+                    'name']['first']
+            df_OutfitMembers.loc[index, 'last_login_date'] = last_login_date
+            df_OutfitMembers.loc[index, 'name'] = CurrentUserName
+        except KeyError:
+            print(request.text)
+            break
+    return df_OutfitMembers
+
+df_OutfitMembers = get_members_last_login(df_OutfitMembers)
 
 # %% Make a datetime version of the last save date
 
