@@ -21,10 +21,17 @@ from sklearn.preprocessing import MinMaxScaler
 # Load player data and extract features related to each play session.
 
 # lists to store the features
-list_session_durations = []      
+list_total_durations = []      
+list_session_durations = []
 list_session_kills = []
+list_session_itemadded = []
+list_session_AchievementEarned = []
+list_session_vehiclekills = []
 list_session_exp = []
-list_session_deaths = []
+list_session_facilitydefense = []
+list_counter_numsessions = []
+list_total_session_durations = []
+#list_session_deaths = []
 
 # Walk through the player files
 for (dirpath, dirnames, filenames) in os.walk('./'):
@@ -34,9 +41,15 @@ for (dirpath, dirnames, filenames) in os.walk('./'):
             with open(filename, 'r') as f:
                 login = 0
                 counter_kills = 0
-                counter_deaths = 0
+                counter_itemadded = 0
+                counter_AchievementEarned = 0
+                counter_vehiclekills = 0
+                counter_facilitydefense = 0
+#                counter_deaths = 0
 #                exp_per_death = 0
                 exp_per_session = 0
+                counter_numsessions = 0
+                timer_totalsessiondurations = 0
             
                 # Parse the player files
                 for line in f.readlines():
@@ -58,6 +71,7 @@ for (dirpath, dirnames, filenames) in os.walk('./'):
 #                            print('logout', split)
                             logout_datetime = int(split[1])
                             
+                            
                             # only record the value if the player has logged in
                             # in our records.
                             if login == 1:
@@ -66,19 +80,50 @@ for (dirpath, dirnames, filenames) in os.walk('./'):
                                 list_session_kills.append(counter_kills)
                                 counter_kills = 0
                                 
-                                list_session_deaths.append(counter_deaths)
-                                counter_deaths = 0
+                                list_session_itemadded.append(counter_itemadded)
+                                counter_itemadded = 0
+                                
+                                list_session_AchievementEarned.append(counter_AchievementEarned)
+                                counter_AchievementEarned = 0
+                                
+                                list_session_vehiclekills.append(counter_vehiclekills)
+                                counter_vehiclekills = 0
+                                
+                                list_session_facilitydefense.append(counter_facilitydefense)
+                                counter_facilitydefense = 0
+                                
+#                                list_session_deaths.append(counter_deaths)
+#                                counter_deaths = 0
                                 
                                 list_session_exp.append(exp_per_session)
                                 experience_per_kill = 0
+                                
+                                counter_numsessions += 1
+                                timer_totalsessiondurations += logout_datetime - login_datetime
                                 
                         # character kill
                         elif int(split[0]) == 1:
                             counter_kills += 1
                             
-                        # character death
-                        elif int(split[0]) == 0:
-                            counter_deaths += 1
+                        # character kill
+                        elif int(split[0]) == 8:
+                            counter_itemadded += 1
+                        
+                        # character kill
+                        elif int(split[0]) == 9:
+                            counter_AchievementEarned += 1
+                            
+                        # character vehicle kills
+                        elif int(split[0]) == 6:
+                            counter_vehiclekills += 1
+                            
+                        # character facility defend
+                        elif int(split[0]) == 12:
+                            counter_facilitydefense += 1
+                            
+#                        # character death
+#                        elif int(split[0]) == 0:
+#                            counter_deaths += 1
                             
                         # gain experience
                         elif int(split[0]) == 4:
@@ -91,17 +136,39 @@ for (dirpath, dirnames, filenames) in os.walk('./'):
                         print('Value Error on filename: ', filename)
                         continue
                     
+                # at the end of the file calculate these
+                
+                # For each session for this file, we want to append the number
+                # of sessions. So we append the counter counter times.
+                if counter_numsessions > 0:
+                    list_counter_numsessions.extend([counter_numsessions]*counter_numsessions)
+                    list_total_session_durations.extend([timer_totalsessiondurations]*counter_numsessions)
+#                else:
+#                    list_counter_numsessions.extend([0])
+                    
 # %% Conversions and adding features to df_session
                         
 df_session = pd.DataFrame(list_session_durations, columns=['Duration'])
+
+# Add 1 second to prevent any sessions from having a duration of zero
+df_session += 1.
+# convert to hours.
 df_session/=3600.
+
 df_session['Kills'] = list_session_kills
-df_session['Deaths'] = list_session_deaths
+df_session['ItemAdded'] = list_session_itemadded
+df_session['AchievementEarned'] = list_session_AchievementEarned
+df_session['vehiclekills'] = list_session_vehiclekills
+#df_session['FacilityDefense'] = list_session_facilitydefense
+#df_session['Deaths'] = list_session_deaths
 df_session['SessionExp'] = list_session_exp
 df_session['kph'] = df_session['Kills']/df_session['Duration']
-df_session['dph'] = df_session['Deaths']/df_session['Duration']
+df_session['vehiclekph'] = df_session['vehiclekills']/df_session['Duration']
+#df_session['dph'] = df_session['Deaths']/df_session['Duration']
 df_session['expph'] = df_session['SessionExp']/df_session['Duration']
-
+df_session['NumSessions'] = list_counter_numsessions
+df_session['CumSessionDurations'] = list_total_session_durations
+df_session['CumSessionDurations'] /= 3600.
 
 # %% Apply normalization
 
@@ -131,7 +198,7 @@ ax.set_ylabel('Inertia')
 
 # %% Clustering on the normalized data
 
-n_clusters = 3
+n_clusters = 10
 kmeans = KMeans(n_clusters=n_clusters).fit(df_session_norm)
 labels = kmeans.predict(df_session_norm)
 df_session['ClustersV1'] = labels
@@ -142,6 +209,20 @@ n_clusters = 10
 kmeans_pca = KMeans(n_clusters=n_clusters).fit(df_session_pca)
 labels_pca = kmeans_pca.predict(df_session_pca)
 df_session['ClustersPCAV1'] = labels_pca
+
+# %%
+
+n_clusters = 7
+kmeans_pca = KMeans(n_clusters=n_clusters).fit(df_session_pca)
+labels_pca = kmeans_pca.predict(df_session_pca)
+df_session['ClustersPCAV2'] = labels_pca
+
+# %%
+
+n_clusters = 4
+kmeans_pca = KMeans(n_clusters=n_clusters).fit(df_session_pca)
+labels_pca = kmeans_pca.predict(df_session_pca)
+df_session['ClustersPCAV3'] = labels_pca
 
 # %% Histogram of session duration
 
@@ -170,14 +251,14 @@ sns.jointplot(x='Duration', y='Kills', data=df_session, kind='scatter')
 # %% Plot: clusters on the original data
 
 fig, ax = plt.subplots()
-plt.scatter(x='Duration', y='Kills', data=df_session, marker='.', c='Clusters3')
+plt.scatter(x='Duration', y='Kills', data=df_session, marker='.', c='ClustersV1')
 ax.set_xlabel('Duration [hrs]')
 ax.set_ylabel('Kills')
 fig.legend()
 
 # %% Plot: cluster made in the pca transform but mapped to the original data
 fig, ax = plt.subplots()
-plt.scatter(x='Duration', y='Kills', data=df_session, marker='.', c='ClustersPCA')
+plt.scatter(x='Duration', y='Kills', data=df_session, marker='.', c='ClustersPCAV1')
 ax.set_xlabel('Duration [hrs]')
 ax.set_ylabel('Kills')
 fig.legend()
@@ -193,4 +274,16 @@ ax.set_ylabel('PCA Axis 1')
 
 crosstab = pd.crosstab(df_session['ClustersV1'], df_session['ClustersPCAV1'])
 crosstab = pd.crosstab(df_session['ClustersV1'], df_session['ClustersPCAV1']).apply(lambda x: x.apply(lambda y: math.log(y+1)))
+crosstab = pd.crosstab(df_session['ClustersPCAV2'], df_session['ClustersPCAV1'])
+crosstab = pd.crosstab(df_session['ClustersPCAV3'], df_session['ClustersPCAV1']).apply(lambda x: x.apply(lambda y: math.log(y+1)))
 
+# %%
+
+sns.pairplot(df_session.iloc[:2000, :], hue='ClustersPCAV1')
+
+# %%
+
+for column in df_session.columns:
+    fig, ax = plt.subplots()
+    sns.boxplot(x='ClustersPCAV3', y=column, data=df_session)
+    ax.set_yscale('log')
