@@ -24,6 +24,7 @@ from sklearn.preprocessing import MinMaxScaler
 list_session_durations = []      
 list_session_kills = []
 list_session_exp = []
+list_session_deaths = []
 
 # Walk through the player files
 for (dirpath, dirnames, filenames) in os.walk('./'):
@@ -33,6 +34,7 @@ for (dirpath, dirnames, filenames) in os.walk('./'):
             with open(filename, 'r') as f:
                 login = 0
                 counter_kills = 0
+                counter_deaths = 0
 #                exp_per_death = 0
                 exp_per_session = 0
             
@@ -64,12 +66,19 @@ for (dirpath, dirnames, filenames) in os.walk('./'):
                                 list_session_kills.append(counter_kills)
                                 counter_kills = 0
                                 
+                                list_session_deaths.append(counter_deaths)
+                                counter_deaths = 0
+                                
                                 list_session_exp.append(exp_per_session)
                                 experience_per_kill = 0
                                 
                         # character kill
                         elif int(split[0]) == 1:
                             counter_kills += 1
+                            
+                        # character death
+                        elif int(split[0]) == 0:
+                            counter_deaths += 1
                             
                         # gain experience
                         elif int(split[0]) == 4:
@@ -87,7 +96,12 @@ for (dirpath, dirnames, filenames) in os.walk('./'):
 df_session = pd.DataFrame(list_session_durations, columns=['Duration'])
 df_session/=3600.
 df_session['Kills'] = list_session_kills
+df_session['Deaths'] = list_session_deaths
 df_session['SessionExp'] = list_session_exp
+df_session['kph'] = df_session['Kills']/df_session['Duration']
+df_session['dph'] = df_session['Deaths']/df_session['Duration']
+df_session['expph'] = df_session['SessionExp']/df_session['Duration']
+
 
 # %% Apply normalization
 
